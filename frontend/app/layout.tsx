@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NimiqProvider } from "@/lib/nimiq/NimiqProvider";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <NimiqProvider>{children}</NimiqProvider>
+        <NimiqProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </NimiqProvider>
       </body>
     </html>
   );

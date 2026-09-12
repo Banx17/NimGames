@@ -1,4 +1,5 @@
 import { NimiqStatus } from "@/components/NimiqStatus";
+import { WalletAuth } from "@/components/auth/WalletAuth";
 
 export default function Home() {
   return (
@@ -6,6 +7,7 @@ export default function Home() {
       <h1 className="text-2xl font-semibold">NimGames</h1>
       <p className="text-zinc-500">Games are coming soon.</p>
       <NimiqStatus />
+      <WalletAuth />
     </main>
   );
 }

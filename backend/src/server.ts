@@ -3,11 +3,14 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import { connectDatabase } from "./config/database";
+import authRouter from "./routes/auth";
 
 const app = express();
 
 app.use(cors({ origin: process.env.FRONTEND_URL ?? "*" }));
 app.use(express.json());
+
+app.use("/api/auth", authRouter);
 
 app.get("/health", (_req, res) => {
   if (mongoose.connection.readyState === 1) {
