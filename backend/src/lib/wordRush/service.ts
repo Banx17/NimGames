@@ -56,9 +56,13 @@ export async function initializeWordRushGame(
 ): Promise<GameSessionDocument> {
   const stored = toStoredSession(session);
   const playerAddress = stored.players[0];
+  const requiredPlayers = stored.mode === "1v1" ? 2 : 1;
   (stored.state as Record<string, unknown>).wordRush = buildInitialState(
     difficulty,
     playerAddress,
+    stored.mode,
+    stored.joinCode,
+    requiredPlayers,
   );
   stored.markModified("state");
   await stored.save();
@@ -191,6 +195,7 @@ export async function submitWordRushAnswer(
   const now = new Date();
   applyTimeTransitions(state, session, now);
 
+
   if (state.sessionStatus === "created") {
     return { ok: false, code: "not_started" };
   }
@@ -262,4 +267,81 @@ export async function submitWordRushAnswer(
     sessionCompleted,
     state: toWordRushPublicState(state, playerAddress, now),
   };
+}
+
+export type WordRushLobbyResult =
+  | { ok: true; session: WordRushPublicState }
+  | { ok: false; code: WordRushGameErrorCode };
+
+export async function joinWordRushGame(
+  session: GameSessionDocument,
+  joinCode: string,
+  playerAddress: string,
+): Promise<WordRushLobbyResult> {
+  const state = getWordRushState(session);
+  if (!state) {
+    return { ok: false, code: "not_found" };
+  }
+  if (state.mode !== "1v1" || state.sessionStatus !== "created") {
+    return { ok: false, code: "invalid_transition" };
+  }
+  if (state.joinCode === null || state.joinCode !== joinCode.trim().toUpperCase()) {
+    return { ok: false, code: "not_found" };
+  }
+  if (state.players[playerAddress]) {
+    return { ok: true, session: toWordRushPublicState(state, playerAddress, new Date()) };
+  }
+  if (Object.keys(state.players).length >= state.requiredPlayers) {
+    return { ok: false, code: "invalid_transition" };
+  }
+  state.players[playerAddress] = {
+    score: 0,
+    correct: 0,
+    incorrect: 0,
+    lastAnswerAt: null,
+    ready: false,
+  };
+  const now = new Date();
+  state.updatedAt = now;
+  const stored = toStoredSession(session);
+  stored.markModified("state");
+  await stored.save();
+  return { ok: true, session: toWordRushPublicState(state, playerAddress, now) };
+}
+
+export async function setWordRushReady(
+  session: GameSessionDocument,
+  playerAddress: string,
+  ready: boolean,
+): Promise<WordRushLobbyResult> {
+  const state = getWordRushState(session);
+  if (!state) {
+    return { ok: false, code: "not_found" };
+  }
+  if (state.mode !== "1v1" || state.sessionStatus !== "created") {
+    return { ok: false, code: "invalid_transition" };
+  }
+  const player = state.players[playerAddress];
+  if (!player) {
+    return { ok: false, code: "not_found" };
+  }
+  if (player.ready === ready) {
+    return { ok: true, session: toWordRushPublicState(state, playerAddress, new Date()) };
+  }
+  const now = new Date();
+  player.ready = ready;
+  if (ready) {
+    if (!state.readyPlayerAddresses.includes(playerAddress)) {
+      state.readyPlayerAddresses.push(playerAddress);
+    }
+  } else {
+    state.readyPlayerAddresses = state.readyPlayerAddresses.filter(
+      (address) => address !== playerAddress,
+    );
+  }
+  state.updatedAt = now;
+  const stored = toStoredSession(session);
+  stored.markModified("state");
+  await stored.save();
+  return { ok: true, session: toWordRushPublicState(state, playerAddress, now) };
 }

@@ -1,6 +1,7 @@
+import { randomInt } from "node:crypto";
 import { Game } from "../models/Game";
 import { GameSession } from "../models/GameSession";
-import type { GameSessionDocument } from "../models/GameSession";
+import type { GameSessionDocument, GameSessionMode } from "../models/GameSession";
 import { User } from "../models/User";
 import type { GameDocument, GameStatus } from "../models/Game";
 
@@ -86,9 +87,35 @@ export type CreateGameSessionResult =
   | { ok: true; session: GameSessionDocument }
   | { ok: false; code: "game_not_found" | "game_not_available" | "user_not_found" };
 
+const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const JOIN_CODE_LENGTH = 6;
+
+function generateJoinCode(): string {
+  let code = "";
+  for (let i = 0; i < JOIN_CODE_LENGTH; i++) {
+    code += JOIN_CODE_ALPHABET[randomInt(JOIN_CODE_ALPHABET.length)];
+  }
+  return code;
+}
+
+async function generateUniqueJoinCode(): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = generateJoinCode();
+    const existing = await GameSession.findOne({ joinCode: code });
+    if (!existing) {
+      return code;
+    }
+    if (attempt === 4) {
+      return code;
+    }
+  }
+  return generateJoinCode();
+}
+
 export async function createGameSessionForUser(
   slug: string,
   address: string,
+  mode: GameSessionMode = "solo",
 ): Promise<CreateGameSessionResult> {
   const game = await Game.findById(slug);
   if (!game) {
@@ -104,8 +131,12 @@ export async function createGameSessionForUser(
     return { ok: false, code: "user_not_found" };
   }
 
+  const joinCode = mode === "1v1" ? await generateUniqueJoinCode() : null;
+
   const session = await GameSession.create({
     game: game._id,
+    mode,
+    joinCode,
     players: [user.address],
   });
 
@@ -116,6 +147,8 @@ export function toPublicGameSession(session: GameSessionDocument) {
   return {
     id: session._id.toString(),
     game: session.game,
+    mode: session.mode,
+    joinCode: session.joinCode,
     status: session.status,
     players: session.players,
     winner: session.winner,

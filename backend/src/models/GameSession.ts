@@ -2,8 +2,16 @@ import mongoose from "mongoose";
 
 export type GameSessionStatus = "pending" | "active" | "completed" | "cancelled";
 
+export type GameSessionMode = "solo" | "1v1";
+
 const gameSessionSchema = new mongoose.Schema({
   game: { type: String, ref: "Game", required: true },
+  mode: {
+    type: String,
+    enum: ["solo", "1v1"],
+    default: "solo",
+  },
+  joinCode: { type: String, default: null },
   status: {
     type: String,
     enum: ["pending", "active", "completed", "cancelled"],
@@ -22,6 +30,8 @@ gameSessionSchema.index({ game: 1, status: 1 });
 export interface GameSessionDocument {
   _id: mongoose.Types.ObjectId;
   game: string;
+  mode: GameSessionMode;
+  joinCode: string | null;
   status: GameSessionStatus;
   players: string[];
   winner: string | null;

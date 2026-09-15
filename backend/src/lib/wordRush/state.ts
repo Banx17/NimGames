@@ -1,3 +1,4 @@
+import type { GameSessionMode } from "../../models/GameSession";
 import type { WordRushDifficulty, WordRushScoringConfig } from "./config";
 import { getWordRushConfig } from "./config";
 import { buildRoundWords } from "./words";
@@ -11,6 +12,7 @@ export interface WordRushPlayerProgress {
   correct: number;
   incorrect: number;
   lastAnswerAt: Date | null;
+  ready: boolean;
 }
 
 export interface WordRushAnswerRecord {
@@ -24,6 +26,10 @@ export interface WordRushAnswerRecord {
 }
 
 export interface WordRushSessionState {
+  mode: GameSessionMode;
+  joinCode: string | null;
+  requiredPlayers: number;
+  readyPlayerAddresses: string[];
   difficulty: WordRushDifficulty;
   sessionStatus: WordRushSessionStatus;
   rounds: string[][];
@@ -55,6 +61,10 @@ export function getCurrentPrompt(state: WordRushSessionState): string | null {
 export function buildInitialState(
   difficulty: WordRushDifficulty,
   playerAddress: string,
+  mode: GameSessionMode = "solo",
+  joinCode: string | null = null,
+  requiredPlayers: number = 1,
+  readyPlayerAddresses: string[] = [],
 ): WordRushSessionState {
   const config = getWordRushConfig(difficulty);
   const rounds = Array.from(
@@ -63,6 +73,10 @@ export function buildInitialState(
   );
 
   return {
+    mode,
+    joinCode,
+    requiredPlayers,
+    readyPlayerAddresses,
     difficulty,
     sessionStatus: "created",
     rounds,
@@ -75,7 +89,7 @@ export function buildInitialState(
     wordsPerRound: config.wordsPerRound,
     scoring: structuredClone(config.scoring),
     players: {
-      [playerAddress]: { score: 0, correct: 0, incorrect: 0, lastAnswerAt: null },
+      [playerAddress]: { score: 0, correct: 0, incorrect: 0, lastAnswerAt: null, ready: false },
     },
     answers: [],
     roundStartedAt: null,

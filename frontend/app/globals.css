@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
+/* NimGames Mini-App — dark purple design foundation
+   Tailwind v4 tokens. Real Figma art gets dropped in later; the repo has none. */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --nim-bg: #17102e;
+  --nim-bg-soft: #1d1436;
+  --nim-bg-deep: #120b26;
+  --nim-surface: #221740;
+  --nim-raised: #2b1d50;
+  --nim-primary: #8b5cf6;
+  --nim-primary-strong: #6d28d9;
+  --nim-accent: #c4b5fd;
+  --nim-white: #ffffff;
+  --nim-text: #f6f4ff;
+  --nim-text-secondary: #bdb3e8;
+  --nim-text-muted: #8b7eb8;
+  --nim-border: rgba(255, 255, 255, 0.08);
+  --nim-border-strong: rgba(255, 255, 255, 0.14);
+  --nim-success: #34d399;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--nim-bg);
+  --color-foreground: var(--nim-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-nim-bg: var(--nim-bg);
+  --color-nim-bg-soft: var(--nim-bg-soft);
+  --color-nim-bg-deep: var(--nim-bg-deep);
+  --color-nim-surface: var(--nim-surface);
+  --color-nim-raised: var(--nim-raised);
+  --color-nim-primary: var(--nim-primary);
+  --color-nim-primary-strong: var(--nim-primary-strong);
+  --color-nim-accent: var(--nim-accent);
+  --color-nim-white: var(--nim-white);
+  --color-nim-text: var(--nim-text);
+  --color-nim-text-secondary: var(--nim-text-secondary);
+  --color-nim-text-muted: var(--nim-text-muted);
+  --color-nim-border: var(--nim-border);
+  --color-nim-border-strong: var(--nim-border-strong);
+  --color-nim-success: var(--nim-success);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--nim-bg);
+  color: var(--nim-text);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
