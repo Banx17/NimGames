@@ -11,7 +11,9 @@ import {
   getWordRushView,
   initializeWordRushGame,
   isWordRushSession,
+  joinWordRushGame,
   refreshWordRushGame,
+  setWordRushReady,
   startWordRushGame,
   submitWordRushAnswer,
 } from "../lib/wordRush/service";
@@ -58,6 +60,7 @@ async function loadOwnedWordRushSession(
 function wordRushSessionResponse(session: GameSessionDocument, address: string) {
   return {
     ...toPublicGameSession(session),
+    currentPlayerAddress: address,
     wordRush: getWordRushView(session, address),
   };
 }
@@ -90,6 +93,56 @@ router.post("/sessions", requireAuth, async (req: AuthedRequest, res) => {
   res.status(201).json({ session: wordRushSessionResponse(session, req.auth!.address) });
 });
 
+router.post("/sessions/join", requireAuth, async (req: AuthedRequest, res) => {
+  const joinCode = String(((req.body ?? {}).joinCode ?? "")).trim().toUpperCase();
+  if (!joinCode) {
+    res.status(400).json({ error: { message: "Join code is required" } });
+    return;
+  }
+
+  const session = await GameSession.findOne({
+    game: "word-rush",
+    joinCode,
+  });
+
+  if (!session || !isWordRushSession(session)) {
+    res.status(404).json({ error: { message: "Session not found" } });
+    return;
+  }
+
+  const result = await joinWordRushGame(session, joinCode, req.auth!.address);
+  if (!result.ok) {
+    sendGameError(res, result.code);
+    return;
+  }
+
+  res.json({
+    session: wordRushSessionResponse(session, req.auth!.address),
+  });
+});
+
+router.post("/sessions/:sessionId/ready", requireAuth, async (req: AuthedRequest, res) => {
+  const session = await loadOwnedWordRushSession(
+    String(req.params.sessionId),
+    req.auth!.address,
+  );
+
+  if (!session) {
+    res.status(404).json({ error: { message: "Session not found" } });
+    return;
+  }
+
+  const result = await setWordRushReady(session, req.auth!.address, Boolean(req.body?.ready));
+  if (!result.ok) {
+    sendGameError(res, result.code);
+    return;
+  }
+
+  res.json({
+    session: wordRushSessionResponse(session, req.auth!.address),
+  });
+});
+
 router.post("/sessions/:sessionId/start", requireAuth, async (req: AuthedRequest, res) => {
   const session = await loadOwnedWordRushSession(
     String(req.params.sessionId),
@@ -102,6 +155,32 @@ router.post("/sessions/:sessionId/start", requireAuth, async (req: AuthedRequest
   }
 
   const result = await startWordRushGame(session);
+  if (!result.ok) {
+    sendGameError(res, result.code);
+    return;
+  }
+
+  res.json({ session: wordRushSessionResponse(session, req.auth!.address) });
+});
+
+router.post("/sessions/join", requireAuth, async (req: AuthedRequest, res) => {
+  const joinCode = String(((req.body ?? {}).joinCode ?? "")).trim().toUpperCase();
+  if (joinCode.length === 0) {
+    res.status(400).json({ error: { message: "Join code is required" } });
+    return;
+  }
+
+  const session = await GameSession.findOne({ game: "word-rush", joinCode });
+  if (!session || !isWordRushSession(session)) {
+    res.status(404).json({ error: { message: "Session not found" } });
+    return;
+  }
+
+  const result = await joinWordRushGame(
+    session,
+    joinCode,
+    req.auth!.address,
+  );
   if (!result.ok) {
     sendGameError(res, result.code);
     return;

@@ -106,6 +106,7 @@ export interface WordRushPublicPlayerProgress {
   correct: number;
   incorrect: number;
   lastAnswerAt: Date | null;
+  ready: boolean;
 }
 
 export interface WordRushResultSummary {
@@ -117,6 +118,7 @@ export interface WordRushResultSummary {
 }
 
 export interface WordRushPublicState {
+  currentPlayerAddress: string;
   difficulty: WordRushDifficulty;
   sessionStatus: WordRushSessionStatus;
   currentRound: number;
@@ -137,6 +139,10 @@ export interface WordRushPublicState {
   startedAt: Date | null;
   updatedAt: Date;
   completedAt: Date | null;
+  mode: GameSessionMode;
+  requiredPlayers: number;
+  readyPlayerAddresses: string[];
+  canStartReady: boolean;
   result: WordRushResultSummary | null;
 }
 
@@ -184,6 +190,16 @@ export function getWordRushResult(
   };
 }
 
+export function computeCanStartReady(state: WordRushSessionState): boolean {
+  if (state.mode !== "1v1" || state.sessionStatus !== "created") {
+    return false;
+  }
+  if (Object.keys(state.players).length < state.requiredPlayers) {
+    return false;
+  }
+  return state.readyPlayerAddresses.length >= state.requiredPlayers;
+}
+
 export function toWordRushPublicState(
   state: WordRushSessionState,
   viewerAddress: string,
@@ -192,7 +208,12 @@ export function toWordRushPublicState(
   const { roundEndsAt, countdownEndsAt } = phaseDeadline(state, now);
 
   return {
+    currentPlayerAddress: viewerAddress,
     difficulty: state.difficulty,
+    mode: state.mode,
+    requiredPlayers: state.requiredPlayers,
+    readyPlayerAddresses: state.readyPlayerAddresses,
+    canStartReady: computeCanStartReady(state),
     sessionStatus: state.sessionStatus,
     currentRound: state.currentRound,
     roundStatus: state.roundStatus,
@@ -205,11 +226,12 @@ export function toWordRushPublicState(
     countdownSeconds: state.countdownSeconds,
     numberOfRounds: state.numberOfRounds,
     wordsPerRound: state.wordsPerRound,
-    players: Object.entries(state.players).map(([address, progress]) => ({
+      players: Object.entries(state.players).map(([address, progress]) => ({
       address,
       score: progress.score,
       correct: progress.correct,
       incorrect: progress.incorrect,
+      ready: progress.ready,
       lastAnswerAt: progress.lastAnswerAt,
     })),
     answers: state.answers.filter((record) => record.player === viewerAddress),
