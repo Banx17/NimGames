@@ -38,8 +38,14 @@ export function GamePlay({
   const hasCurrentWord = wordRush.currentWord !== null;
 
   if (isCompleted) {
-    const winnerAddress = wordRush.result?.winner ?? null;
+    const result = wordRush.result;
+    const isTie = result?.tie === true;
+    const winnerAddress = !isTie ? (result?.winner ?? null) : null;
     const isStaked = session.mode === "1v1" && wordRush.stake > 0;
+    const pot = result?.pot ?? 0;
+    const winnerPayout =
+      winnerAddress !== null ? (result?.payouts[winnerAddress] ?? 0) : 0;
+
     return (
       <div className="flex flex-col gap-4 rounded-xl border border-nim-border/60 bg-nim-surface-panel p-5">
         <div className="flex flex-col gap-1">
@@ -51,17 +57,45 @@ export function GamePlay({
           </h2>
         </div>
 
-        {isStaked && (
-          <div className="flex items-center justify-between rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm">
-            <span className="text-nim-text">Stake</span>
-            <span className="font-semibold tabular-nums text-nim-accent">
-              {wordRush.stake} NIM
-            </span>
-          </div>
+        {isStaked && result !== null && (
+          <>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm">
+                <span className="text-nim-text">Pot</span>
+                <span className="font-semibold tabular-nums text-nim-accent">
+                  {pot} NIM
+                </span>
+              </div>
+
+              {!isTie && winnerAddress !== null && (
+                <div className="flex items-center justify-between rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm">
+                  <span className="text-nim-text">Winner payout</span>
+                  <span className="font-semibold tabular-nums text-nim-accent">
+                    {winnerPayout} NIM
+                  </span>
+                </div>
+              )}
+
+              {isTie && (
+                <div className="flex flex-col gap-1 rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm">
+                  <span className="font-semibold text-nim-text">It’s a tie</span>
+                  <span className="text-xs text-nim-text-muted">
+                    The pot is split equally between the tied players.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-nim-text-muted">
+              Payouts reflect the game result only — no NIM is transferred
+              automatically.
+            </p>
+          </>
         )}
 
         <div className="flex flex-col gap-2">
           {sortByScore(wordRush.players).map((player) => {
+            const payout = result?.payouts[player.address] ?? 0;
             const isWinner = winnerAddress !== null && player.address === winnerAddress;
             return (
               <div
@@ -78,8 +112,15 @@ export function GamePlay({
                     </span>
                   )}
                 </span>
-                <span className="font-semibold tabular-nums text-nim-accent">
-                  {player.score} pts
+                <span className="flex items-center gap-2">
+                  {payout > 0 && (
+                    <span className="rounded-full bg-nim-success/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-nim-success">
+                      +{payout} NIM
+                    </span>
+                  )}
+                  <span className="font-semibold tabular-nums text-nim-accent">
+                    {player.score} pts
+                  </span>
                 </span>
               </div>
             );

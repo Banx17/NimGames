@@ -63,6 +63,9 @@ export interface WordRushPublicState {
     correct: number;
     incorrect: number;
     winner: string | null;
+    tie: boolean;
+    pot: number;
+    payouts: Record<string, number>;
   } | null;
 }
 
