@@ -56,6 +56,16 @@ The player who finds a valid word first receives the point.
 
 A match can contain multiple rounds, with the player achieving the highest score becoming the winner.
 
+#### Staking
+
+Stakes are optional and apply only to 1v1 Word Rush matches. Solo games remain stake-free.
+
+In a 1v1 match, each player may enter an equal NIM stake. The pot is the combined stake from both players. For example, 10 NIM from each player creates a 20 NIM pot.
+
+The player with the highest final score is the winner. If the final scores are tied, the pot is split equally between the tied players.
+
+The stake and pot currently represent a server-side game state concept only. No NIM is transferred, locked, escrowed, or paid out on-chain. Actual on-chain settlement is deferred until it has been confirmed that the current Nimiq Mini App environment technically supports the required payment/settlement flow. Refunds for cancelled or abandoned matches are not defined yet, and will remain unspecified until actual settlement infrastructure is designed.
+
 ### Dare
 
 A social game where players give challenges to one another.
