@@ -53,6 +53,11 @@ export function GameLobby({
             <span className="text-[11px] text-nim-text-muted">
               Round {session.wordRush.currentRound} · {session.wordRush.difficulty}
             </span>
+            {session.mode === "1v1" && session.wordRush.stake > 0 && (
+              <span className="text-[11px] text-nim-text-muted">
+                Stake: {session.wordRush.stake} NIM
+              </span>
+            )}
           </div>
         </div>
 

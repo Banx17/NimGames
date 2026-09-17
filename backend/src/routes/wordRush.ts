@@ -6,6 +6,7 @@ import type { GameSessionDocument } from "../models/GameSession";
 import { createGameSessionForUser, toPublicGameSession } from "../lib/games";
 import { DEFAULT_WORD_RUSH_DIFFICULTY, isWordRushDifficulty } from "../lib/wordRush/config";
 import type { WordRushDifficulty } from "../lib/wordRush/config";
+import type { GameSessionMode } from "../models/GameSession";
 import type { WordRushGameErrorCode } from "../lib/wordRush/service";
 import {
   getWordRushView,
@@ -72,7 +73,29 @@ router.post("/sessions", requireAuth, async (req: AuthedRequest, res) => {
     return;
   }
 
-  const created = await createGameSessionForUser("word-rush", req.auth!.address);
+  const mode = (req.body ?? {}).mode;
+  if (mode !== undefined && mode !== "solo" && mode !== "1v1") {
+    res.status(400).json({ error: { message: "Unknown mode" } });
+    return;
+  }
+
+  const stakeRaw = (req.body ?? {}).stake ?? 0;
+  const stake =
+    typeof stakeRaw === "number" && Number.isFinite(stakeRaw) && stakeRaw >= 0
+      ? stakeRaw
+      : 0;
+  if (stakeRaw !== 0 && stake === 0) {
+    res.status(400).json({ error: { message: "Stake must be a non-negative number" } });
+    return;
+  }
+
+  if ((mode === undefined || mode === "solo") && stake !== 0) {
+    res.status(400).json({ error: { message: "Solo sessions cannot have a stake" } });
+    return;
+  }
+
+  const gameMode = (mode as GameSessionMode | undefined) ?? "solo";
+  const created = await createGameSessionForUser("word-rush", req.auth!.address, gameMode);
 
   if (!created.ok) {
     if (created.code === "game_not_found") {
@@ -88,6 +111,7 @@ router.post("/sessions", requireAuth, async (req: AuthedRequest, res) => {
   const session = await initializeWordRushGame(
     created.session,
     (difficulty as WordRushDifficulty | undefined) ?? DEFAULT_WORD_RUSH_DIFFICULTY,
+    stake,
   );
 
   res.status(201).json({ session: wordRushSessionResponse(session, req.auth!.address) });

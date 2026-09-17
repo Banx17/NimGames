@@ -14,6 +14,8 @@ interface CreateLobbyProps {
   onDifficultyChange: (difficulty: WordRushDifficulty) => void;
   mode: WordRushGameMode;
   onModeChange: (mode: WordRushGameMode) => void;
+  stake: string;
+  onStakeChange: (stake: string) => void;
   onCreate: () => void;
   onJoin: (joinCode: string) => void;
   user: AuthUser | null;
@@ -25,6 +27,8 @@ export function CreateLobby({
   onDifficultyChange,
   mode,
   onModeChange,
+  stake,
+  onStakeChange,
   onCreate,
   onJoin,
   user,
@@ -60,6 +64,23 @@ export function CreateLobby({
               </button>
             ))}
           </div>
+
+          {mode === "1v1" && (
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-nim-text-muted">
+                Optional stake (NIM)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={stake}
+                onChange={(e) => onStakeChange(e.target.value)}
+                placeholder="None"
+                className="w-full rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm text-nim-text placeholder:text-nim-text-muted/60 focus:border-nim-primary/60 focus:outline-none"
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">

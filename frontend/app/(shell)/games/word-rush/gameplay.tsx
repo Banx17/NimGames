@@ -38,6 +38,8 @@ export function GamePlay({
   const hasCurrentWord = wordRush.currentWord !== null;
 
   if (isCompleted) {
+    const winnerAddress = wordRush.result?.winner ?? null;
+    const isStaked = session.mode === "1v1" && wordRush.stake > 0;
     return (
       <div className="flex flex-col gap-4 rounded-xl border border-nim-border/60 bg-nim-surface-panel p-5">
         <div className="flex flex-col gap-1">
@@ -49,18 +51,39 @@ export function GamePlay({
           </h2>
         </div>
 
+        {isStaked && (
+          <div className="flex items-center justify-between rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm">
+            <span className="text-nim-text">Stake</span>
+            <span className="font-semibold tabular-nums text-nim-accent">
+              {wordRush.stake} NIM
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
-          {sortByScore(wordRush.players).map((player) => (
-            <div
-              key={player.address}
-              className="flex items-center justify-between rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm"
-            >
-              <span className="truncate text-nim-text">{shortAddress(player.address)}</span>
-              <span className="font-semibold tabular-nums text-nim-accent">
-                {player.score} pts
-              </span>
-            </div>
-          ))}
+          {sortByScore(wordRush.players).map((player) => {
+            const isWinner = winnerAddress !== null && player.address === winnerAddress;
+            return (
+              <div
+                key={player.address}
+                className={`flex items-center justify-between rounded-lg border bg-nim-surface px-3 py-2 text-sm ${
+                  isWinner ? "border-nim-primary/40 bg-nim-primary/10" : "border-nim-border/60"
+                }`}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-nim-text">{shortAddress(player.address)}</span>
+                  {isWinner && (
+                    <span className="rounded-full bg-nim-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-nim-accent">
+                      Winner
+                    </span>
+                  )}
+                </span>
+                <span className="font-semibold tabular-nums text-nim-accent">
+                  {player.score} pts
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex gap-2">

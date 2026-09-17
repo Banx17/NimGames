@@ -34,6 +34,7 @@ export interface WordRushAnswerRecord {
 export interface WordRushPublicState {
   difficulty: WordRushDifficulty;
   mode: WordRushGameMode;
+  stake: number;
   requiredPlayers: number;
   readyPlayerAddresses: string[];
   canStartReady: boolean;
@@ -57,6 +58,7 @@ export interface WordRushPublicState {
   players: WordRushPlayerProgress[];
   answers: WordRushAnswerRecord[];
   result: {
+    completed: boolean;
     score: number;
     correct: number;
     incorrect: number;
@@ -85,10 +87,11 @@ export interface WordRushSessionResponse {
 export function createWordRushSession(
   difficulty: WordRushDifficulty,
   mode: WordRushGameMode,
+  stake = 0,
 ): Promise<WordRushSessionResponse> {
   return apiFetch<WordRushSessionResponse>("/api/games/word-rush/sessions", {
     method: "POST",
-    body: { difficulty, mode },
+    body: { difficulty, mode, ...(stake > 0 ? { stake } : {}) },
     token: getAuthToken(),
   });
 }

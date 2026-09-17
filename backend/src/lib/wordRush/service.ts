@@ -53,6 +53,7 @@ export function getWordRushView(
 export async function initializeWordRushGame(
   session: GameSessionDocument,
   difficulty: WordRushDifficulty,
+  stake = 0,
 ): Promise<GameSessionDocument> {
   const stored = toStoredSession(session);
   const playerAddress = stored.players[0];
@@ -63,6 +64,8 @@ export async function initializeWordRushGame(
     stored.mode,
     stored.joinCode,
     requiredPlayers,
+    [],
+    stored.mode === "1v1" ? stake : 0,
   );
   stored.markModified("state");
   await stored.save();

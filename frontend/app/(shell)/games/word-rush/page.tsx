@@ -26,6 +26,7 @@ export default function WordRushPage() {
 
   const [difficulty, setDifficulty] = useState<WordRushDifficulty>("easy");
   const [mode, setMode] = useState<WordRushGameMode>("solo");
+  const [stake, setStake] = useState("");
   const [session, setSession] = useState<WordRushSessionPublic | null>(null);
 
   const [answer, setAnswer] = useState("");
@@ -101,7 +102,15 @@ export default function WordRushPage() {
 
   async function handleCreate() {
     try {
-      const { session: created } = await createWordRushSession(difficulty, mode);
+      const stakeValue =
+        mode === "1v1" && Number.isFinite(Number(stake)) && Number(stake) > 0
+          ? Math.floor(Number(stake))
+          : 0;
+      const { session: created } = await createWordRushSession(
+        difficulty,
+        mode,
+        stakeValue,
+      );
       setSession(created);
 
       if (mode === "solo") {
@@ -149,6 +158,8 @@ export default function WordRushPage() {
           onDifficultyChange={setDifficulty}
           mode={mode}
           onModeChange={setMode}
+          stake={stake}
+          onStakeChange={setStake}
           onCreate={handleCreate}
           onJoin={handleJoin}
           user={user}

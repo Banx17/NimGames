@@ -27,6 +27,7 @@ export interface WordRushAnswerRecord {
 
 export interface WordRushSessionState {
   mode: GameSessionMode;
+  stake: number;
   joinCode: string | null;
   requiredPlayers: number;
   readyPlayerAddresses: string[];
@@ -65,6 +66,7 @@ export function buildInitialState(
   joinCode: string | null = null,
   requiredPlayers: number = 1,
   readyPlayerAddresses: string[] = [],
+  stake = 0,
 ): WordRushSessionState {
   const config = getWordRushConfig(difficulty);
   const rounds = Array.from(
@@ -74,6 +76,7 @@ export function buildInitialState(
 
   return {
     mode,
+    stake,
     joinCode,
     requiredPlayers,
     readyPlayerAddresses,
@@ -120,6 +123,7 @@ export interface WordRushResultSummary {
 export interface WordRushPublicState {
   currentPlayerAddress: string;
   difficulty: WordRushDifficulty;
+  stake: number;
   sessionStatus: WordRushSessionStatus;
   currentRound: number;
   roundStatus: WordRushRoundStatus | null;
@@ -210,6 +214,7 @@ export function toWordRushPublicState(
   return {
     currentPlayerAddress: viewerAddress,
     difficulty: state.difficulty,
+    stake: state.stake,
     mode: state.mode,
     requiredPlayers: state.requiredPlayers,
     readyPlayerAddresses: state.readyPlayerAddresses,
