@@ -25,6 +25,11 @@ export interface WordRushAnswerRecord {
   submittedAt: Date;
 }
 
+export interface WordRushOutcome {
+  winner: string | null;
+  tie: boolean;
+}
+
 export interface WordRushSessionState {
   mode: GameSessionMode;
   stake: number;
@@ -49,6 +54,7 @@ export interface WordRushSessionState {
   startedAt: Date | null;
   updatedAt: Date;
   completedAt: Date | null;
+  outcome: WordRushOutcome | null;
 }
 
 export function getCurrentPrompt(state: WordRushSessionState): string | null {
@@ -100,7 +106,39 @@ export function buildInitialState(
     startedAt: null,
     updatedAt: new Date(),
     completedAt: null,
+    outcome: null,
   };
+}
+
+export function computeWordRushPot(state: WordRushSessionState): number {
+  return state.mode === "1v1" ? state.stake * 2 : 0;
+}
+
+export function deriveWordRushPayouts(state: WordRushSessionState): Record<string, number> {
+  const pot = computeWordRushPot(state);
+  if (pot === 0 || state.outcome === null) {
+    return {};
+  }
+
+  const payouts: Record<string, number> = {};
+  for (const address of Object.keys(state.players)) {
+    payouts[address] = 0;
+  }
+
+  if (state.outcome.tie) {
+    const highestScore = Math.max(...Object.values(state.players).map((player) => player.score));
+    const tiedAddresses = Object.entries(state.players)
+      .filter(([, player]) => player.score === highestScore)
+      .map(([address]) => address);
+    const split = tiedAddresses.length > 0 ? pot / tiedAddresses.length : 0;
+    for (const address of tiedAddresses) {
+      payouts[address] += split;
+    }
+  } else if (state.outcome.winner !== null) {
+    payouts[state.outcome.winner] = pot;
+  }
+
+  return payouts;
 }
 
 export interface WordRushPublicPlayerProgress {
@@ -118,6 +156,9 @@ export interface WordRushResultSummary {
   correct: number;
   incorrect: number;
   winner: string | null;
+  tie: boolean;
+  pot: number;
+  payouts: Record<string, number>;
 }
 
 export interface WordRushPublicState {
@@ -181,16 +222,16 @@ export function getWordRushResult(
   }
 
   const viewer = state.players[viewerAddress];
-  const winnerEntry = Object.entries(state.players).sort(
-    ([, a], [, b]) => b.score - a.score,
-  )[0];
 
   return {
     completed: true,
     score: viewer?.score ?? 0,
     correct: viewer?.correct ?? 0,
     incorrect: viewer?.incorrect ?? 0,
-    winner: winnerEntry ? winnerEntry[0] : null,
+    winner: state.outcome?.winner ?? null,
+    tie: state.outcome?.tie ?? false,
+    pot: computeWordRushPot(state),
+    payouts: deriveWordRushPayouts(state),
   };
 }
 

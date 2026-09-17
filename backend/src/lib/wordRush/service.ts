@@ -12,11 +12,17 @@ function toStoredSession(session: GameSessionDocument): StoredSession {
   return session as unknown as StoredSession;
 }
 
-function pickWinner(
-  players: Record<string, WordRushPlayerProgress>,
-): string | null {
-  const entry = Object.entries(players).sort(([, a], [, b]) => b.score - a.score)[0];
-  return entry ? entry[0] : null;
+function buildOutcome(state: WordRushSessionState): { winner: string | null; tie: boolean } {
+  const entries = Object.entries(state.players);
+  if (entries.length === 0) {
+    return { winner: null, tie: false };
+  }
+  const highestScore = Math.max(...entries.map(([, player]) => player.score));
+  const topEntries = entries.filter(([, player]) => player.score === highestScore);
+  if (topEntries.length > 1) {
+    return { winner: null, tie: true };
+  }
+  return { winner: topEntries[0][0], tie: false };
 }
 
 function completeGame(state: WordRushSessionState, session: GameSessionDocument, now: Date): void {
@@ -24,9 +30,12 @@ function completeGame(state: WordRushSessionState, session: GameSessionDocument,
   state.roundStatus = "completed";
   state.completedAt = now;
   state.updatedAt = now;
+  if (state.outcome === null) {
+    state.outcome = buildOutcome(state);
+    session.winner = state.outcome.winner;
+  }
   session.status = "completed";
   session.completedAt = now;
-  session.winner = pickWinner(state.players);
 }
 
 export function isWordRushSession(session: GameSessionDocument): boolean {
