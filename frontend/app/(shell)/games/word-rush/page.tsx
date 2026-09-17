@@ -31,6 +31,11 @@ export default function WordRushPage() {
 
   const [answer, setAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [answerFeedback, setAnswerFeedback] = useState<{
+    kind: "correct" | "incorrect";
+    points: number;
+    word: string;
+  } | null>(null);
   const [resultMessage, setResultMessage] = useState<{
     kind: "success" | "error";
     text: string;
@@ -111,6 +116,7 @@ export default function WordRushPage() {
         mode,
         stakeValue,
       );
+      setAnswerFeedback(null);
       setSession(created);
 
       if (mode === "solo") {
@@ -171,10 +177,20 @@ export default function WordRushPage() {
         <GameLobby
           session={session}
           answer={answer}
-          onAnswerChange={setAnswer}
+          onAnswerChange={(value) => {
+            setAnswer(value);
+            setAnswerFeedback(null);
+          }}
           submitting={submitting}
           onSubmit={() => {
-            void submitAnswer(session, answer, setSubmitting, setResultMessage, setSession);
+            void submitAnswer(
+              session,
+              answer,
+              setSubmitting,
+              setAnswerFeedback,
+              setResultMessage,
+              setSession,
+            );
           }}
           ready={ready}
           onReadyChange={setReady}
@@ -188,10 +204,21 @@ export default function WordRushPage() {
         <GamePlay
           session={session}
           answer={answer}
-          onAnswerChange={setAnswer}
+          feedback={answerFeedback}
+          onAnswerChange={(value) => {
+            setAnswer(value);
+            setAnswerFeedback(null);
+          }}
           submitting={submitting}
           onSubmit={() => {
-            void submitAnswer(session, answer, setSubmitting, setResultMessage, setSession);
+            void submitAnswer(
+              session,
+              answer,
+              setSubmitting,
+              setAnswerFeedback,
+              setResultMessage,
+              setSession,
+            );
           }}
           onBack={() => router.push("/games")}
         />
@@ -216,6 +243,7 @@ async function submitAnswer(
   session: WordRushSessionPublic,
   answer: string,
   setSubmitting: (v: boolean) => void,
+  setAnswerFeedback: (v: { kind: "correct" | "incorrect"; points: number; word: string } | null) => void,
   setResultMessage: (v: { kind: "success" | "error"; text: string } | null) => void,
   setSession: (s: WordRushSessionPublic) => void,
 ): Promise<void> {
@@ -224,12 +252,17 @@ async function submitAnswer(
   }
   setSubmitting(true);
   try {
-    const { session: updated } = await submitWordRushAnswer(
+    const { session: updated, answer: result } = await submitWordRushAnswer(
       session.id,
       answer.trim(),
       session.wordRush.currentRound,
       session.wordRush.currentWordIndex,
     );
+    setAnswerFeedback({
+      kind: result.correct ? "correct" : "incorrect",
+      points: result.points,
+      word: session.wordRush.currentWord ?? "",
+    });
     setSession(updated);
   } catch (err) {
     setResultMessage({

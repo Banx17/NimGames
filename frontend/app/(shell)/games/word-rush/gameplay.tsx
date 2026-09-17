@@ -9,6 +9,11 @@ import type {
 interface GamePlayProps {
   session: WordRushSessionPublic;
   answer: string;
+  feedback: {
+    kind: "correct" | "incorrect";
+    points: number;
+    word: string;
+  } | null;
   onAnswerChange: (answer: string) => void;
   submitting: boolean;
   onSubmit: () => void;
@@ -26,6 +31,7 @@ function sortByScore(players: WordRushPlayerProgress[]): WordRushPlayerProgress[
 export function GamePlay({
   session,
   answer,
+  feedback,
   onAnswerChange,
   submitting,
   onSubmit,
@@ -183,6 +189,25 @@ export function GamePlay({
         <p className="text-center text-3xl font-extrabold tracking-tight text-nim-text">
           {wordRush.currentWord}
         </p>
+
+        {feedback !== null && wordRush.currentWord === feedback.word && (
+          <div
+            aria-live="polite"
+            className={`flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-semibold ${
+              feedback.kind === "correct"
+                ? "border-nim-success/40 bg-nim-success/10 text-nim-success"
+                : "border-nim-error/40 bg-nim-error/10 text-nim-error"
+            }`}
+          >
+            {feedback.kind === "correct" ? (
+              <>
+                Correct{feedback.points > 0 && <> · +{feedback.points} pts</>}
+              </>
+            ) : (
+              <>That was incorrect</>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col gap-2">
           <input
