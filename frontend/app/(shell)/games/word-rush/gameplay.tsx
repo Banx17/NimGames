@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { BoltIcon } from "@/components/shell/icons";
 import type {
   WordRushSessionPublic,
@@ -17,6 +18,7 @@ interface GamePlayProps {
   onAnswerChange: (answer: string) => void;
   submitting: boolean;
   onSubmit: () => void;
+  onSendWord: (word: string) => void;
   onBack: () => void;
 }
 
@@ -35,13 +37,15 @@ export function GamePlay({
   onAnswerChange,
   submitting,
   onSubmit,
+  onSendWord,
   onBack,
 }: GamePlayProps) {
   const wordRush = session.wordRush;
 
   const isCompleted = wordRush.sessionStatus === "completed";
   const isCountdown = wordRush.sessionStatus === "countdown" || wordRush.countdownRemainingSeconds !== null;
-  const hasCurrentWord = wordRush.currentWord !== null;
+
+  const boardLettersKey = wordRush.board?.letters.join("") ?? "";
 
   if (isCompleted) {
     const result = wordRush.result;
@@ -157,86 +161,228 @@ export function GamePlay({
     );
   }
 
-  if (hasCurrentWord) {
-    return (
-      <div className="flex flex-col gap-4 rounded-xl border border-nim-border/60 bg-nim-surface-panel p-5">
-        <div className="flex items-center justify-between text-xs text-nim-text-muted">
-          <span>
-            Round {wordRush.currentRound} · Word {wordRush.currentWordIndex + 1}
-          </span>
-          {wordRush.roundRemainingSeconds !== null && (
-            <span className="tabular-nums">{wordRush.roundRemainingSeconds}s left</span>
+  return (
+    <div className="flex flex-col gap-4 rounded-xl border border-nim-border/60 bg-nim-surface-panel p-5">
+      <div className="flex items-center justify-between text-xs text-nim-text-muted">
+        <span>Round {wordRush.currentRound}</span>
+        {wordRush.roundRemainingSeconds !== null && (
+          <span className="tabular-nums">{wordRush.roundRemainingSeconds}s left</span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {sortByScore(wordRush.players).map((player) => (
+          <div
+            key={player.address}
+            className="flex items-center justify-between rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm"
+          >
+            <span className="truncate text-nim-text">{shortAddress(player.address)}</span>
+            <span className="font-semibold tabular-nums text-nim-accent">
+              {player.score} pts
+              <span className="ml-1 text-[11px] text-nim-text-muted">
+                {player.correct}/{player.incorrect}
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-center text-sm font-medium text-nim-text-muted">
+        Find as many words as you can
+      </p>
+
+      {wordRush.board === null ? (
+        <div className="flex flex-col gap-1 rounded-xl border border-nim-border/40 bg-nim-surface-dimmer/40 px-4 py-6 text-center">
+          <BoltIcon className="mx-auto h-8 w-8 text-nim-text-muted" />
+          <p className="text-sm text-nim-text-muted">Waiting for the board…</p>
+        </div>
+      ) : (
+        <WordBoard
+          key={`${wordRush.currentRound}-${boardLettersKey}`}
+          board={wordRush.board}
+          onSendWord={onSendWord}
+        />
+      )}
+
+      {feedback !== null && (
+        <div
+          aria-live="polite"
+          className={`flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-semibold ${
+            feedback.kind === "correct"
+              ? "border-nim-success/40 bg-nim-success/10 text-nim-success"
+              : "border-nim-error/40 bg-nim-error/10 text-nim-error"
+          }`}
+        >
+          {feedback.kind === "correct" ? (
+            <>
+              Correct{feedback.points > 0 && <> · +{feedback.points} pts</>}
+            </>
+          ) : (
+            <>That was incorrect</>
           )}
         </div>
+      )}
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {sortByScore(wordRush.players).map((player) => (
-            <div
-              key={player.address}
-              className="flex items-center justify-between rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm"
-            >
-              <span className="truncate text-nim-text">{shortAddress(player.address)}</span>
-              <span className="font-semibold tabular-nums text-nim-accent">
-                {player.score} pts
-                <span className="ml-1 text-[11px] text-nim-text-muted">
-                  {player.correct}/{player.incorrect}
-                </span>
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-center text-3xl font-extrabold tracking-tight text-nim-text">
-          {wordRush.currentWord}
-        </p>
-
-        {feedback !== null && wordRush.currentWord === feedback.word && (
-          <div
-            aria-live="polite"
-            className={`flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-semibold ${
-              feedback.kind === "correct"
-                ? "border-nim-success/40 bg-nim-success/10 text-nim-success"
-                : "border-nim-error/40 bg-nim-error/10 text-nim-error"
-            }`}
-          >
-            {feedback.kind === "correct" ? (
-              <>
-                Correct{feedback.points > 0 && <> · +{feedback.points} pts</>}
-              </>
-            ) : (
-              <>That was incorrect</>
-            )}
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2">
-          <input
-            value={answer}
-            onChange={(e) => onAnswerChange(e.target.value)}
-            placeholder="Type your answer…"
-            autoComplete="off"
-            disabled={submitting}
-            className="rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm text-nim-text placeholder:text-nim-text-muted/60 focus:border-nim-primary/60 focus:outline-none disabled:opacity-50"
-          />
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={submitting}
-            className="rounded-lg bg-nim-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {submitting ? "Submitting…" : "Submit answer"}
-          </button>
-        </div>
+      <div className="flex flex-col gap-2">
+        <input
+          value={answer}
+          onChange={(e) => onAnswerChange(e.target.value)}
+          placeholder="Type a word…"
+          autoComplete="off"
+          disabled={submitting}
+          className="rounded-lg border border-nim-border/60 bg-nim-surface px-3 py-2 text-sm text-nim-text placeholder:text-nim-text-muted/60 focus:border-nim-primary/60 focus:outline-none disabled:opacity-50"
+        />
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={submitting}
+          className="rounded-lg bg-nim-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          {submitting ? "Submitting…" : "Submit word"}
+        </button>
       </div>
-    );
+    </div>
+  );
+}
+
+function WordBoard({
+  board,
+  onSendWord,
+}: {
+  board: { letters: string[]; size: number };
+  onSendWord: (word: string) => void;
+}) {
+  const [selected, setSelected] = useState<number[]>([]);
+  const selectedRef = useRef<number[]>([]);
+  const draggingRef = useRef(false);
+
+  const selectedWord = selected.map((index) => board.letters[index] ?? "").join("");
+
+  function cellIndexAt(clientX: number, clientY: number): number | null {
+    const element = document.elementFromPoint(clientX, clientY);
+    const cell =
+      element instanceof Element ? element.closest<HTMLElement>("[data-cell-index]") : null;
+    const raw = cell?.dataset.cellIndex;
+    if (raw === undefined || raw === "") {
+      return null;
+    }
+    const index = Number(raw);
+    return Number.isInteger(index) && index >= 0 ? index : null;
+  }
+
+  function isAdjacent(a: number, b: number): boolean {
+    const size = board.size;
+    const ax = a % size;
+    const ay = Math.floor(a / size);
+    const bx = b % size;
+    const by = Math.floor(b / size);
+    const dx = Math.abs(ax - bx);
+    const dy = Math.abs(ay - by);
+    return dx <= 1 && dy <= 1 && (dx !== 0 || dy !== 0);
+  }
+
+  function resetSelection() {
+    draggingRef.current = false;
+    selectedRef.current = [];
+    setSelected([]);
+  }
+
+  function handleSelectionPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+    const target = event.target as HTMLElement;
+    const cell = target.closest<HTMLElement>("[data-cell-index]");
+    if (!cell) {
+      return;
+    }
+    const index = Number(cell.dataset.cellIndex);
+    if (!Number.isInteger(index) || index < 0) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    draggingRef.current = true;
+    selectedRef.current = [index];
+    setSelected([index]);
+  }
+
+  function handleSelectionPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!draggingRef.current) {
+      return;
+    }
+    const index = cellIndexAt(event.clientX, event.clientY);
+    if (index === null) {
+      return;
+    }
+    const current = selectedRef.current;
+    if (current.includes(index)) {
+      return;
+    }
+    if (!isAdjacent(current[current.length - 1], index)) {
+      return;
+    }
+    const next = [...current, index];
+    selectedRef.current = next;
+    setSelected(next);
+  }
+
+  function handleSelectionPointerUp() {
+    if (!draggingRef.current) {
+      return;
+    }
+    const word = selectedRef.current.map((i) => board.letters[i] ?? "").join("");
+    resetSelection();
+    if (word.length >= 3) {
+      onSendWord(word);
+    }
+  }
+
+  function handleSelectionPointerCancel() {
+    resetSelection();
   }
 
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-nim-border/60 bg-nim-surface-panel px-4 py-6 text-center">
-      <span className="my-4 text-4xl text-nim-text-muted">
-        <BoltIcon className="mx-auto h-10 w-10" />
-      </span>
-      <p className="text-sm text-nim-text-muted">Waiting for the next prompt…</p>
+    <div className="flex flex-col gap-3">
+      <div className="flex h-11 items-center justify-center rounded-lg border border-nim-border/60 bg-nim-surface px-3">
+        {selectedWord.length > 0 ? (
+          <span className="text-2xl font-bold uppercase tracking-widest text-nim-accent">
+            {selectedWord}
+          </span>
+        ) : (
+          <span className="text-xs text-nim-text-muted">Swipe to select a word</span>
+        )}
+      </div>
+
+      <div
+        className="mx-auto grid w-full max-w-sm gap-2"
+        style={{
+          gridTemplateColumns: `repeat(${board.size}, minmax(0, 1fr))`,
+          touchAction: "none",
+        }}
+        onPointerDown={handleSelectionPointerDown}
+        onPointerMove={handleSelectionPointerMove}
+        onPointerUp={handleSelectionPointerUp}
+        onPointerCancel={handleSelectionPointerCancel}
+      >
+        {board.letters.map((letter, index) => {
+          const isSelected = selected.includes(index);
+          return (
+            <div
+              key={index}
+              data-cell-index={index}
+              className={`flex aspect-square select-none touch-none cursor-pointer items-center justify-center rounded-lg border text-xl font-bold uppercase tracking-wide transition-colors ${
+                isSelected
+                  ? "border-nim-primary/70 bg-nim-primary/25 text-nim-accent"
+                  : "border-nim-border/60 bg-nim-surface text-nim-text"
+              }`}
+              aria-label={letter.toUpperCase()}
+            >
+              {letter.toUpperCase()}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

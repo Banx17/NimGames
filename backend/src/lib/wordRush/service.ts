@@ -1,6 +1,8 @@
 import type { GameSessionDocument } from "../../models/GameSession";
+import { WORD_RUSH_MIN_WORD_LENGTH } from "./config";
 import type { WordRushDifficulty } from "./config";
-import { buildInitialState, getCurrentPrompt, toWordRushPublicState } from "./state";
+import { isWordOnBoard } from "./board";
+import { buildInitialState, toWordRushPublicState } from "./state";
 import type { WordRushPlayerProgress, WordRushPublicState, WordRushSessionState } from "./state";
 
 type StoredSession = GameSessionDocument & {
@@ -88,7 +90,9 @@ export type WordRushGameErrorCode =
   | "countdown"
   | "completed"
   | "stale_word"
-  | "no_current_word";
+  | "no_current_word"
+  | "duplicate_word"
+  | "invalid_word";
 
 function applyTimeTransitions(
   state: WordRushSessionState,
@@ -196,7 +200,6 @@ export async function submitWordRushAnswer(
   playerAddress: string,
   rawAnswer: string,
   claimedRound: number,
-  claimedWordIndex: number,
 ): Promise<SubmitAnswerResult> {
   const stored = toStoredSession(session);
   const state = getWordRushState(session);
@@ -206,7 +209,6 @@ export async function submitWordRushAnswer(
 
   const now = new Date();
   applyTimeTransitions(state, session, now);
-
 
   if (state.sessionStatus === "created") {
     return { ok: false, code: "not_started" };
@@ -218,27 +220,37 @@ export async function submitWordRushAnswer(
     return { ok: false, code: "completed" };
   }
 
-  const word = getCurrentPrompt(state);
-  if (word === null || state.roundStatus !== "active" || state.roundStartedAt === null) {
+  if (state.roundStatus !== "active" || state.roundStartedAt === null) {
     return { ok: false, code: "no_current_word" };
   }
 
-  if (claimedRound !== state.currentRound || claimedWordIndex !== state.currentWordIndex) {
+  if (claimedRound !== state.currentRound) {
     return { ok: false, code: "stale_word" };
   }
 
-  const answer = rawAnswer.trim();
-  if (answer.length === 0) {
-    return { ok: false, code: "no_current_word" };
+  const answer = rawAnswer.trim().toLowerCase();
+  if (answer.length < WORD_RUSH_MIN_WORD_LENGTH) {
+    return { ok: false, code: "invalid_word" };
   }
 
-  const correct = answer.toLowerCase() === word.toLowerCase();
-  const points = correct ? state.scoring.pointsPerCorrect : -state.scoring.wrongAnswerPenalty;
-
   const round = state.currentRound;
+  const board = state.rounds[round - 1];
+  if (!board) {
+    return { ok: false, code: "not_found" };
+  }
+
   const player: WordRushPlayerProgress =
     state.players[playerAddress] ??
     { score: 0, correct: 0, incorrect: 0, lastAnswerAt: null };
+
+  const alreadyFound = state.foundWords[round]?.[playerAddress]?.includes(answer) ?? false;
+  if (alreadyFound) {
+    return { ok: false, code: "duplicate_word" };
+  }
+
+  const correct = board.words.includes(answer) && isWordOnBoard(board, answer);
+  const points = correct ? state.scoring.pointsPerCorrect : -state.scoring.wrongAnswerPenalty;
+
   player.score += points;
   if (correct) {
     player.correct += 1;
@@ -248,24 +260,13 @@ export async function submitWordRushAnswer(
   player.lastAnswerAt = now;
   state.players[playerAddress] = player;
 
-  state.answers.push({ round, word, player: playerAddress, answer, correct, points, submittedAt: now });
+  state.answers.push({ round, word: answer, player: playerAddress, answer, correct, points, submittedAt: now });
 
-  let sessionCompleted = false;
-  const roundWords = state.rounds[state.currentRound - 1];
-  const roundFinished =
-    roundWords !== undefined && state.currentWordIndex + 1 >= roundWords.length;
-
-  if (roundFinished) {
-    if (state.currentRound < state.numberOfRounds) {
-      state.currentRound += 1;
-      state.currentWordIndex = 0;
-      state.roundStartedAt = now;
-    } else {
-      completeGame(state, session, now);
-      sessionCompleted = true;
-    }
-  } else {
-    state.currentWordIndex += 1;
+  if (correct) {
+    state.foundWords[round] = state.foundWords[round] ?? {};
+    const found = state.foundWords[round][playerAddress] ?? [];
+    found.push(answer);
+    state.foundWords[round][playerAddress] = found;
   }
 
   state.updatedAt = now;
@@ -276,7 +277,7 @@ export async function submitWordRushAnswer(
     ok: true,
     correct,
     points,
-    sessionCompleted,
+    sessionCompleted: false,
     state: toWordRushPublicState(state, playerAddress, now),
   };
 }

@@ -220,6 +220,16 @@ export default function WordRushPage() {
               setSession,
             );
           }}
+          onSendWord={(word) => {
+            void submitAnswer(
+              session,
+              word,
+              setSubmitting,
+              setAnswerFeedback,
+              setResultMessage,
+              setSession,
+            );
+          }}
           onBack={() => router.push("/games")}
         />
       )}
@@ -256,7 +266,6 @@ async function submitAnswer(
       session.id,
       answer.trim(),
       session.wordRush.currentRound,
-      session.wordRush.currentWordIndex,
     );
     setAnswerFeedback({
       kind: result.correct ? "correct" : "incorrect",

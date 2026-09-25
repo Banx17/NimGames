@@ -1,5 +1,81 @@
 import type { WordRushDifficulty } from "./config";
 
+const BOARD_WORD_POOLS: Record<WordRushDifficulty, string[]> = {
+  easy: [
+    "cat",
+    "dog",
+    "sun",
+    "tree",
+    "book",
+    "rain",
+    "fire",
+    "star",
+    "moon",
+    "fish",
+    "bird",
+    "lake",
+    "snow",
+    "wind",
+    "leaf",
+    "door",
+    "ball",
+    "hand",
+    "ship",
+    "king",
+  ],
+  medium: [
+    "apple",
+    "bread",
+    "cloud",
+    "grass",
+    "honey",
+    "lemon",
+    "mango",
+    "ocean",
+    "peach",
+    "river",
+    "stone",
+    "tiger",
+    "tower",
+    "wagon",
+    "zebra",
+    "amber",
+    "flame",
+    "melon",
+    "tulip",
+    "crane",
+    "piano",
+    "basil",
+  ],
+  hard: [
+    "abyss",
+    "anvil",
+    "augur",
+    "azure",
+    "brine",
+    "cabal",
+    "crypt",
+    "douse",
+    "elope",
+    "exult",
+    "fable",
+    "glint",
+    "gourd",
+    "haunt",
+    "idiom",
+    "joust",
+    "knave",
+    "mirth",
+    "oasis",
+    "prism",
+    "quill",
+    "torch",
+    "viper",
+    "whelp",
+    "yield",
+  ],
+};
+
 const WORD_POOLS: Record<WordRushDifficulty, string[]> = {
   easy: [
     "cat",
@@ -56,6 +132,10 @@ const WORD_POOLS: Record<WordRushDifficulty, string[]> = {
 
 export function getWordPool(difficulty: WordRushDifficulty): string[] {
   return [...WORD_POOLS[difficulty]];
+}
+
+export function getBoardWordPool(difficulty: WordRushDifficulty): string[] {
+  return [...BOARD_WORD_POOLS[difficulty]];
 }
 
 export function buildRoundWords(

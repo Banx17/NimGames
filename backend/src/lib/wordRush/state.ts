@@ -1,7 +1,8 @@
 import type { GameSessionMode } from "../../models/GameSession";
 import type { WordRushDifficulty, WordRushScoringConfig } from "./config";
 import { getWordRushConfig } from "./config";
-import { buildRoundWords } from "./words";
+import { generateRoundBoard } from "./board";
+import type { WordRushBoard } from "./board";
 
 export type WordRushSessionStatus = "created" | "countdown" | "active" | "completed";
 
@@ -38,7 +39,7 @@ export interface WordRushSessionState {
   readyPlayerAddresses: string[];
   difficulty: WordRushDifficulty;
   sessionStatus: WordRushSessionStatus;
-  rounds: string[][];
+  rounds: WordRushBoard[];
   currentRound: number;
   roundStatus: WordRushRoundStatus | null;
   currentWordIndex: number;
@@ -49,6 +50,7 @@ export interface WordRushSessionState {
   scoring: WordRushScoringConfig;
   players: Record<string, WordRushPlayerProgress>;
   answers: WordRushAnswerRecord[];
+  foundWords: Record<number, Record<string, string[]>>;
   roundStartedAt: Date | null;
   countdownStartedAt: Date | null;
   startedAt: Date | null;
@@ -57,12 +59,12 @@ export interface WordRushSessionState {
   outcome: WordRushOutcome | null;
 }
 
+export function getCurrentRoundBoard(state: WordRushSessionState): WordRushBoard | null {
+  return state.rounds[state.currentRound - 1] ?? null;
+}
+
 export function getCurrentPrompt(state: WordRushSessionState): string | null {
-  const roundWords = state.rounds[state.currentRound - 1];
-  if (!roundWords) {
-    return null;
-  }
-  return roundWords[state.currentWordIndex] ?? null;
+  return null;
 }
 
 export function buildInitialState(
@@ -77,7 +79,7 @@ export function buildInitialState(
   const config = getWordRushConfig(difficulty);
   const rounds = Array.from(
     { length: config.numberOfRounds },
-    (_, i) => buildRoundWords(difficulty, i + 1, config.wordsPerRound),
+    () => generateRoundBoard(difficulty),
   );
 
   return {
@@ -101,6 +103,7 @@ export function buildInitialState(
       [playerAddress]: { score: 0, correct: 0, incorrect: 0, lastAnswerAt: null, ready: false },
     },
     answers: [],
+    foundWords: {},
     roundStartedAt: null,
     countdownStartedAt: null,
     startedAt: null,
@@ -161,6 +164,11 @@ export interface WordRushResultSummary {
   payouts: Record<string, number>;
 }
 
+export interface WordRushPublicBoard {
+  letters: string[];
+  size: number;
+}
+
 export interface WordRushPublicState {
   currentPlayerAddress: string;
   difficulty: WordRushDifficulty;
@@ -170,6 +178,7 @@ export interface WordRushPublicState {
   roundStatus: WordRushRoundStatus | null;
   currentWordIndex: number;
   currentWord: string | null;
+  board: WordRushPublicBoard | null;
   roundDurationSeconds: number;
   countdownSeconds: number;
   numberOfRounds: number;
@@ -264,9 +273,15 @@ export function toWordRushPublicState(
     currentRound: state.currentRound,
     roundStatus: state.roundStatus,
     currentWordIndex: state.currentWordIndex,
-    currentWord:
+    currentWord: null,
+    board:
       state.sessionStatus === "active" && state.roundStatus === "active"
-        ? getCurrentPrompt(state)
+        ? (() => {
+            const currentBoard = state.rounds[state.currentRound - 1];
+            return currentBoard
+              ? { letters: [...currentBoard.letters], size: currentBoard.size }
+              : null;
+          })()
         : null,
     roundDurationSeconds: state.roundDurationSeconds,
     countdownSeconds: state.countdownSeconds,

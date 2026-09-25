@@ -31,6 +31,8 @@ const GAME_ERROR_CODES: Record<WordRushGameErrorCode, { status: number; message:
   completed: { status: 409, message: "Game has already completed" },
   stale_word: { status: 409, message: "Answer is stale or a duplicate" },
   no_current_word: { status: 409, message: "No active prompt is available" },
+  duplicate_word: { status: 409, message: "Word already scored by you" },
+  invalid_word: { status: 400, message: "Invalid word" },
 };
 
 function sendGameError(res: Response, code: WordRushGameErrorCode): void {
@@ -234,17 +236,13 @@ router.get("/sessions/:sessionId", requireAuth, async (req: AuthedRequest, res) 
 });
 
 router.post("/sessions/:sessionId/answer", requireAuth, async (req: AuthedRequest, res) => {
-  const { answer, round, wordIndex } = req.body ?? {};
-  if (typeof answer !== "string" || answer.trim().length === 0 || answer.trim().length > 64) {
-    res.status(400).json({ error: { message: "Invalid answer" } });
+  const { word, round } = req.body ?? {};
+  if (typeof word !== "string" || word.trim().length === 0 || word.trim().length > 64) {
+    res.status(400).json({ error: { message: "Invalid word" } });
     return;
   }
   if (typeof round !== "number" || !Number.isInteger(round) || round < 1) {
     res.status(400).json({ error: { message: "Invalid round" } });
-    return;
-  }
-  if (typeof wordIndex !== "number" || !Number.isInteger(wordIndex) || wordIndex < 0) {
-    res.status(400).json({ error: { message: "Invalid word index" } });
     return;
   }
 
@@ -260,9 +258,8 @@ router.post("/sessions/:sessionId/answer", requireAuth, async (req: AuthedReques
   const result = await submitWordRushAnswer(
     session,
     req.auth!.address,
-    answer,
+    word,
     round,
-    wordIndex,
   );
 
   if (!result.ok) {

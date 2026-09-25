@@ -43,6 +43,10 @@ export interface WordRushPublicState {
   roundStatus: WordRushRoundStatus | null;
   currentWordIndex: number;
   currentWord: string | null;
+  board: {
+    letters: string[];
+    size: number;
+  } | null;
   roundDurationSeconds: number;
   countdownSeconds: number;
   numberOfRounds: number;
@@ -152,15 +156,14 @@ export interface SubmitWordRushAnswerResponse extends WordRushSessionResponse {
 
 export function submitWordRushAnswer(
   sessionId: string,
-  answer: string,
+  word: string,
   round: number,
-  wordIndex: number,
 ): Promise<SubmitWordRushAnswerResponse> {
   return apiFetch<SubmitWordRushAnswerResponse>(
     `/api/games/word-rush/sessions/${sessionId}/answer`,
     {
       method: "POST",
-      body: { answer, round, wordIndex },
+      body: { word, round },
       token: getAuthToken(),
     },
   );

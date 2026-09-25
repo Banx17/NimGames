@@ -1,5 +1,11 @@
 export const WORD_RUSH_DIFFICULTIES = ["easy", "medium", "hard"] as const;
 
+export const WORD_RUSH_BOARD_SIZE = 5;
+export const WORD_RUSH_MIN_WORD_LENGTH = 3;
+export const WORD_RUSH_MAX_WORD_LENGTH = 5;
+export const WORD_RUSH_MIN_PLANTED_WORDS = 4;
+export const WORD_RUSH_MAX_PLANTED_WORDS = 6;
+
 export type WordRushDifficulty = (typeof WORD_RUSH_DIFFICULTIES)[number];
 
 export const DEFAULT_WORD_RUSH_DIFFICULTY: WordRushDifficulty = "easy";
